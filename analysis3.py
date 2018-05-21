@@ -14,8 +14,7 @@ user_log = pd.read_csv("data/user_log_format1.csv")
 user_log = user_log.fillna(0)
 
 # 用户-商家整体交易特征提取
-repeat_buy_user = pd.read_csv(
-    "data/repeat_buy_user.csv")
+repeat_buy_user = pd.read_csv("data/repeat_buy_user.csv")
 a = pd.DataFrame({"user_id": repeat_buy_user.user_id, "merchant_id": repeat_buy_user.seller_id,
                   "repeat_buy_times_user_seller": repeat_buy_user.action_type})
 b = pd.merge(train, a, on=["user_id", "merchant_id"], how='left')
@@ -23,8 +22,7 @@ b = pd.merge(train, a, on=["user_id", "merchant_id"], how='left')
 x = b
 # rename merchant_id to seller_id
 x = x.rename(columns={"merchant_id": "seller_id"})
-x = x.rename(
-    columns={"repeat_buy_times_user_seller": "buy_times_between_user_and_seller"})
+x = x.rename(columns={"repeat_buy_times_user_seller": "buy_times_between_user_and_seller"})
 # 新加特征 2017-04-21
 # 用户在该商家购买是否大于1次、大于2次、、、分别提取特征
 x["user_buy_once_in_this_seller"] = 0
@@ -60,26 +58,29 @@ x = pd.merge(x, a, on=['user_id', 'seller_id'], how='left')   # NaN表示没有
 
 # 添加用户整体的重复购买、商家整体的重复购买
 # 商家的整体重复购买
-a = user_log[user_log.action_type == 2].groupby(
-    ['seller_id', 'user_id']).count()
+a = user_log[user_log.action_type == 2].groupby(['seller_id', 'user_id']).count()
 a = a.reset_index()
-# 考察商家被多少个用户多次购买过(购买次数>2)
-seller_be_repeat_buy_by_how_many_user = a[a.action_type > 1].groupby([
-                                                                     "seller_id"]).count()
+# 考察商家被多少个用户多次购买过(购买次数>2) 这里应该是等于2吧，因为3指的是“喜欢”
+seller_be_repeat_buy_by_how_many_user = a[a.action_type > 1].groupby(["seller_id"]).count()
 seller_be_repeat_buy_by_how_many_user = seller_be_repeat_buy_by_how_many_user.reset_index()
 seller_be_repeat_buy_by_how_many_user["seller_be_repeat_buy_by_how_many_user"] = seller_be_repeat_buy_by_how_many_user.item_id
-seller_be_repeat_buy_by_how_many_user = seller_be_repeat_buy_by_how_many_user.drop([
-                                                                                   "item_id"], axis=1)
+seller_be_repeat_buy_by_how_many_user = seller_be_repeat_buy_by_how_many_user.drop(["item_id"], axis=1)
+# 可以用rename这个方法，一行替换掉上面的两行
 seller_be_repeat_buy_by_how_many_user = seller_be_repeat_buy_by_how_many_user.drop(
     ["user_id", "cat_id", "time_stamp", "brand_id", "action_type"], axis=1)
+# 为什么要drop两次，如果用inplace的话是不是更简单易懂：前两行可以被以下替换
+# seller_be_repeat_buy_by_how_many_user.drop(["item_id"，"user_id", "cat_id", "time_stamp", "brand_id", "action_type"], axis=1,inplace = True)
+
 # 考察商家被重复购买的用户重复购买过多少次
 seller_be_repeat_buy_all_times_by_repeat_user = a[a.action_type > 1].groupby(
-    ["seller_id"]).agg({"item_id": pd.np.sum})
+    ["seller_id"]).agg({"item_id": pd.np.sum}) # 对item_id求和，这怎么理解？
 seller_be_repeat_buy_all_times_by_repeat_user = seller_be_repeat_buy_all_times_by_repeat_user.reset_index()
 seller_be_repeat_buy_all_times_by_repeat_user[
     "seller_be_repeat_buy_all_times_by_repeat_user"] = seller_be_repeat_buy_all_times_by_repeat_user.item_id
-seller_be_repeat_buy_all_times_by_repeat_user = seller_be_repeat_buy_all_times_by_repeat_user.drop([
-                                                                                                   "item_id"], axis=1)
+seller_be_repeat_buy_all_times_by_repeat_user = seller_be_repeat_buy_all_times_by_repeat_user.drop(["item_id"], axis=1)
+# 前面两行代码可以直接用rename一行搞定：
+# seller_be_repeat_buy_all_times_by_repeat_user.rename(columns = {"item_id":'seller_be_repeat_buy_all_times_by_repeat_user'})
+
 # drop columns
 # merge data
 x = pd.merge(x, seller_be_repeat_buy_by_how_many_user,
@@ -93,21 +94,21 @@ x["seller_be_repeat_buy_times_on_avg_user"] = x.seller_be_repeat_buy_all_times_b
 # 用户的整体重复购买
 a = user_log[user_log.action_type == 2].groupby(
     ['user_id', 'seller_id']).count()
-a = a.reset_index()
+a = a.reset_index() # 可以直接在上一行的groupby中添加参数：as_index = Flase，然后这一行就可以省掉
 b = a[a.action_type > 1]  # 过滤点没有重复购买记录的user_id - seller_id 对
 
 b_user_repeat_buy_sellers = b[["user_id", "seller_id"]].groupby([
                                                                 "user_id"]).count()
-b_user_repeat_buy_sellers = b_user_repeat_buy_sellers.reset_index()
+b_user_repeat_buy_sellers = b_user_repeat_buy_sellers.reset_index() # 同理
 b_user_repeat_buy_sellers['how_many_sellers_a_user_repeat_buy'] = b_user_repeat_buy_sellers.seller_id
 b_user_repeat_buy_sellers = b_user_repeat_buy_sellers.drop(
-    ["seller_id"], axis=1)
+    ["seller_id"], axis=1) # 用rename方法即可
 
 b_user_repeat_buy_times = b[["user_id", "item_id"]].groupby(
     ["user_id"]).agg({"item_id": pd.np.sum})  # 不会按照seller去重的
-b_user_repeat_buy_times = b_user_repeat_buy_times.reset_index()
+b_user_repeat_buy_times = b_user_repeat_buy_times.reset_index() # 同理
 b_user_repeat_buy_times['how_many_times_a_user_repeat_buy'] = b_user_repeat_buy_times.item_id
-b_user_repeat_buy_times = b_user_repeat_buy_times.drop(["item_id"], axis=1)
+b_user_repeat_buy_times = b_user_repeat_buy_times.drop(["item_id"], axis=1) # 同理
 
 x = pd.merge(x, b_user_repeat_buy_sellers, on=['user_id'], how='left')
 x = pd.merge(x, b_user_repeat_buy_times, on=['user_id'], how='left')
@@ -126,7 +127,7 @@ x["buy_times_between_user_and_seller_div_how_many_times_a_user_repeat_buy"] = x.
 a = user_log[user_log.time_stamp != 1111]
 a = a[a.action_type == 2]
 b = a.groupby(["user_id", "seller_id"]).count()
-b = b.reset_index()
+b = b.reset_index() # 同理
 buy_times_between_user_and_seller_befor_1111 = pd.DataFrame(
     {"user_id": b.user_id, "seller_id": b.seller_id, "buy_times_between_user_and_seller_befor_1111": b.item_id})
 x = pd.merge(x, buy_times_between_user_and_seller_befor_1111,
@@ -136,7 +137,7 @@ x = pd.merge(x, buy_times_between_user_and_seller_befor_1111,
 a = user_log[user_log.time_stamp != 1111]
 a = a[a.action_type == 3]
 b = a.groupby(["user_id", "seller_id"]).count()
-b = b.reset_index()
+b = b.reset_index() # 同理
 favourite_times_between_user_and_seller_befor_1111 = pd.DataFrame(
     {"user_id": b.user_id, "seller_id": b.seller_id, "favourite_times_between_user_and_seller_befor_1111": b.item_id})
 x = pd.merge(x, favourite_times_between_user_and_seller_befor_1111,
@@ -199,6 +200,8 @@ x = x.fillna(0)
 a = user_log[user_log.action_type == 2].groupby(
     ["user_id", "brand_id"]).count().reset_index()
 a = a.groupby(["user_id"]).count().reset_index()
+# 这一行代码就能搞定上面的两行了
+# a = user_log[user_log.action_type == 2].groupby(['user_id','brand_id'],as_index = False).size()
 # 用户购买的总的diff品牌数目
 b = pd.DataFrame(
     {"user_id": a.user_id, "number_of_diff_brand_this_user_buy": a.brand_id})
@@ -218,15 +221,14 @@ a = user_log[user_log.action_type == 2].groupby(
 user_whole_buy_times = pd.DataFrame(
     {"user_id": a.user_id, "user_whole_buy_times": a.item_id})
 x = pd.merge(x, user_whole_buy_times, on=['user_id'], how='left')
-# 用户在某个商家购买的物品数目站用户总的购买物品的比例
+# 用户在某个商家购买的购买次数站用户总的购买次数比例
 x["user_buy_times_from_this_seller_ratio_to_user_whole_buy_times"] = x.buy_times_between_user_and_seller * \
     1.0 / x.user_whole_buy_times
 
 
 # 用户-类目-商家 特征提取
 # 这些特征最终都要经过group by 聚合成用户-商家特征
-a_ucs = user_log[user_log.action_type == 2].groupby(
-    ["user_id", "cat_id", "seller_id"]).count().reset_index()
+a_ucs = user_log[user_log.action_type == 2].groupby(["user_id", "cat_id", "seller_id"]).count().reset_index()
 a_ucs = pd.DataFrame({"user_id": a_ucs.user_id, "cat_id": a_ucs.cat_id,
                       "seller_id": a_ucs.seller_id, "ucs": a_ucs.item_id})
 a_uc = user_log[user_log.action_type == 2].groupby(
@@ -260,8 +262,7 @@ Out[39]:
 12          606       2313    1        3   1   916
 13         1134       4461    1        3   1    56
 """
-a["ucs_div_uc"] = a.ucs * 1.0 / \
-    a.uc   # 用户在商家购买类目下商品的数量占用户购买该类目下商品数量的比,越大证明用户越喜欢在该商家购买类目下的商品
+a["ucs_div_uc"] = a.ucs * 1.0 / a.uc   # 用户在商家购买类目下商品的数量占用户购买该类目下商品数量的比,越大证明用户越喜欢在该商家购买类目下的商品
 a["ucs_multiply_cs"] = a.ucs * a.cs  # 新构造的特征, 业务含义待定
 # merge to x
 b = a.groupby(["user_id", "seller_id"]).agg(

@@ -14,20 +14,21 @@ def get_k_fold(data):
     for train_index, test_index in kf.split(data):
         train_indexs.append(train_index)
         test_indexs.append(test_index)
-    return train_indexs,test_indexs
-    
+    return train_indexs,test_indexs # list类型
+
 def createmodel():
-    x,y = getTrainData()
-    test_data,ids = getPredictData()
+    x,y = getTrainData()  # 这里返回的是train_split1.csv的train[feature],train['label']
+    test_data,ids = getPredictData() # test[feature], test[['seller_id','user_id']]
     train_indexs,test_indexs = get_k_fold(x)
-    length = len(x)
-    firstlayer = np.array([1.0]*length)
+    length = len(x) # train的总行数
+
+    firstlayer = np.array([1.0]*length) # 相当于np.ones(length)，二者耗时也差不多，占用的内存大小一模一样
     #stacking linearsvr
     x_arr = np.array(x)
     y_arr = np.array(y)
-    for i in range(len(train_indexs)):
+    for i in range(len(train_indexs)): # 这里直接用for i in train_indexs
         print("first train"+str(i))
-        train = x_arr[train_indexs[i]]
+        train = x_arr[train_indexs[i]] # 这里直接就是x_arr[i]
         label = y_arr[train_indexs[i]]
         path = pardir+'/model/lr'+str(i)+".pkl"
         if os.path.exists(path):
@@ -53,11 +54,12 @@ def createmodel():
     # test = np.mean(test,axis = 0)
     # test = [[t] for t in test]
     # firstlayer = x_arr
+
     secondlayer = np.array([1.0]*length)
     finalres = []
     for i in range(len(train_indexs)):
         print("second train"+str(i))
-        train = x_arr[train_indexs[i]]
+        train = x_arr[train_indexs[i]] # 这里都用的是numpy操作，没有pandas好懂而已
         label = y_arr[train_indexs[i]]
         path = pardir+'/model/rf'+str(i)+".pkl"
         if os.path.exists(path):
@@ -79,7 +81,7 @@ def createmodel():
     test2 = (clf.predict_proba(test_data))[:,1]
     test2 = np.array([[t] for t in test2])
     # res = np.mean(test,axis = 0
-    
+
     train = np.hstack((x_arr,firstlayer,secondlayer))
     test = np.hstack((test_data,test1,test2))
     path = pardir+'/model/gbdt.pkl'
@@ -89,17 +91,17 @@ def createmodel():
         joblib.dump(clf, path)
     else:
         clf = joblib.load(path)
-  
+
     predict_res = clf.predict_proba(test)
     # print(clf.classes_)
     # print(predict_res)
     ids['prob'] = predict_res[:,1]
     res = pd.DataFrame({'prob':ids.groupby(['user_id','merchant_id'])['prob'].max()}).reset_index()
     res.to_csv(stacking_res_path,encoding='utf-8',mode = 'w', index = False)
- 
+
 if __name__=="__main__":
     createmodel()
-        
-        
-        
-    
+
+
+
+

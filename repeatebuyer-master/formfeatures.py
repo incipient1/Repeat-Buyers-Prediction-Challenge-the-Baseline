@@ -8,8 +8,8 @@ user_log_path = pardir+'/data/user_log_format1.csv'
 train_path = pardir+'/data/train_format1.csv'
 test_path = pardir+'/data/test_format1.csv'
 
-train_log_path = pardir+'/data/train_log_format1.csv'
-test_log_path = pardir+'/data/test_log_format1.csv'
+train_log_path = pardir+'/data/train_log_format1.csv' # 这个文件哪里来的？
+test_log_path = pardir+'/data/test_log_format1.csv'   # ？
 
 merchant_path = pardir +'/middledata/merchant.csv'
 item_path = pardir +'/middledata/item.csv'
@@ -23,16 +23,27 @@ merchant_brand_path = pardir+'/middledata/merchant_brand.csv'
 merchant_cate_path = pardir+'/middledata/merchant_cate.csv'
 
 def merchantFeature(data):
-    merchant = pd.DataFrame()
+    merchant = pd.DataFrame() # 这个用法很面向对象
+    group = data.groupby("merchant_id") # 然后后面都用group，可节约运算吧
+
     merchant['item_set']=data.groupby("merchant_id")['item_id'].apply(set)
+    # 生成的item_set中的每个元素都是{}set，防止出现item_id重复，也可用nunique这个方法:
+    # merchant['item_num'] = groupy['item_id'].nunique()
+    # 也可以写一个循环:
+    # for i in {'item_id':'item_num','cate_id':'cate_num','brand_id':'band_num','user_id':'user_num'}.items():
+    #     merchent[i[1]] = group[i[0]].unique()
+
     merchant['item_num']=(merchant['item_set'].map(len)).astype(np.int16)
     merchant.drop('item_set',1,inplace=True)
+
     merchant['cate_set']=data.groupby("merchant_id")['cat_id'].apply(set)
     merchant['cate_num']=(merchant['cate_set'].map(len)).astype(np.int16)
     merchant.drop('cate_set',1,inplace=True)
+
     merchant['brand_set']=data.groupby("merchant_id")['brand_id'].apply(set)
     merchant['brand_num']=(merchant['brand_set'].map(len)).astype(np.int16)
     merchant.drop('brand_set',1,inplace=True)
+
     merchant['user_set']=data.groupby("merchant_id")['user_id'].apply(set)
     merchant['user_num']=(merchant['user_set'].map(len)).astype(np.int32)
     merchant.drop('user_set',1,inplace=True)
@@ -42,27 +53,34 @@ def merchantFeature(data):
     # merchant['purchase']=group.apply(lambda g:len(g[g['action_type']==2]))
     # merchant['add_to_favourite'] =group.apply(lambda g:len(g[g['action_type']==3]))
     # del group
+
     temp = pd.DataFrame((data.groupby(["merchant_id","user_id"])['time_stamp'].apply(set).map(len)).astype(np.int16))
     temp.reset_index(level=["merchant_id","user_id"],inplace = True)
-    t = temp[temp['time_stamp']>1]
+    t = temp[temp['time_stamp']>1] # 找到操作天数大于1的
     del temp
     merchant['repeat_users']=t.groupby('merchant_id')['user_id'].count().astype(np.int16)
+    # repeat_user 更亲切的来说应该是user_id在这个merchant_id下action的天数大于1的，因为action大于1不代表repeat购买
     del t
     merchant.reset_index(level=['merchant_id'],inplace = True)
     c = pd.DataFrame({'count':data.groupby(["merchant_id",'action_type']).size()}).reset_index()
     table = pd.pivot_table(c, values='count', index=["merchant_id"],columns=['action_type'],fill_value=0)
+    # 这里直接用c.unstack('action_type').fillna(0)就可以了
+
     table.reset_index(level=["merchant_id"],inplace = True)
     res = pd.merge(merchant,table,on="merchant_id")
     del merchant
     res.to_csv(merchant_path,encoding='utf-8',mode = 'w', index = False)
     del res
-    
+
 def oneitemfeature(data,col,path):
     c = pd.DataFrame({'count':data.groupby([col,'action_type']).size()}).reset_index()
     table = pd.pivot_table(c, values='count', index=[col],columns=['action_type'],fill_value=0)
+    # table = data.groupy([col,'action_type']).size().unstack('action_type').fillna(0)
+    # 这一行就顶的上前面两行了
+
     table.reset_index(level=[col],inplace = True)
     table.to_csv(path, encoding='utf-8',mode = 'w', index = False)
-  
+
 def itemFeature(data):
     oneitemfeature(data, "item_id", item_path)
     # item = pd.DataFrame()
@@ -93,36 +111,36 @@ def brandFeature(data):
     # del group
     # brand.reset_index(level=['brand_id'],inplace = True)
     # brand.to_csv(brand_path,encoding='utf-8',mode = 'w', index = False)
-    # del brand 
+    # del brand
 
 def user_merchant_feature(data):
-    user_merchant=pd.DataFrame()
+    user_merchant = pd.DataFrame()
     group = data.groupby(['user_id','merchant_id'])
-    user_merchant['total_items']=group['item_id'].count()
+    user_merchant['total_items'] = group['item_id'].count()
     user_merchant['differnt_items'] = (group['item_id'].apply(set).map(len)).astype(np.int16)
     user_merchant['differnt_brands'] = (group['brand_id'].apply(set).map(len)).astype(np.int16)
     user_merchant.reset_index(level=['user_id','merchant_id'],inplace = True)
     user_merchant.to_csv(user_merchant_path,encoding='utf-8',mode = 'w', index = False)
     del user_merchant
-    
+
 class Groupby:
     def __init__(self, keys):
         _, self.keys_as_int = np.unique(keys, return_inverse = True)
         self.n_keys = max(self.keys_as_int)
         self.set_indices()
-        
+
     def set_indices(self):
         self.indices = [[] for i in range(self.n_keys+1)]
         for i, k in enumerate(self.keys_as_int):
             self.indices[k].append(i)
         self.indices = [np.array(elt) for elt in self.indices]
-        
+
     def apply(self, function, vector):
         result = np.zeros(len(vector))
         for k in range(self.n_keys):
             result[self.indices[k]] = function(vector[self.indices[k]])
         return result
-    
+
 def one_other_feature(data, one, other, one_other_path):
     c = pd.DataFrame({'count':data.groupby([one,other,'action_type']).size()}).reset_index()
     table = pd.pivot_table(c, values='count', index=[one, other],columns=['action_type'],fill_value=0)
@@ -148,7 +166,7 @@ def identify_duplicate():
     test_.reset_index(level=['user_id','merchant_id'],inplace = True)
     s1 = pd.merge(train_, test_, how='inner', on=['user_id','merchant_id'])
     print(s1)
-    
+
 def split_train_test(data):
     # train= pd.read_csv(train_path,encoding='utf-8')
     # s1 = pd.merge(train[['user_id','merchant_id']],data,how='inner', on=['user_id','merchant_id'])
@@ -187,7 +205,7 @@ if __name__=="__main__":
     # train_data = pd.read_csv(train_path,encoding='utf-8')
     # newdata = pd.merge(train_data,data,how='inner', on=['user_id','merchant_id'])
     # print(newdata.groupby(['user_id','merchant_id','item_id','time_stamp','actinon_type'])
-    
-    
+
+
 
 

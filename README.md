@@ -14,10 +14,14 @@ data_format2中数据特征：
 |-1|user_id不是merchant_id的一个新消费者，只是超出了本次预测|有可能在一年前买过东西|
 |NULL|仅存在于test中，是我们本次需要预测的。当然test中也有label不为Null的数据|
 
-data_fromat1中的数据特征
+data_fromat1中的数据特征<br>
 文件test、train format1.csv这两个文件中的label值为1、0，对test而言即需要分类的。
 
 ## 分析方法
 1. 用pandas：train_predict.ipynb
 2. 用dask：repeat_buyer_prediction_with_dask.ipynb。此时用的需要的电脑内存最少为16G，并且计算时可以用到所有的处理器，而不像pandas只能用到单核。
+
+## 疑问
+都用的是data_format1文件夹中的数据，为什么没有人用data_format2中的数据呢？
+timestamp中数据的单位是什么？没有看懂
 
