@@ -16,6 +16,7 @@ data_format2中数据特征：
 
 data_fromat1中的数据特征<br>
 文件test、train format1.csv这两个文件中的label值为1、0，对test而言即需要分类的。
+time_stamp，后面两个数字是日期，前面1-2个数字是月份
 
 ## 分析方法
 1. 用pandas：train_predict.ipynb
@@ -23,5 +24,4 @@ data_fromat1中的数据特征<br>
 
 ## 疑问
 都用的是data_format1文件夹中的数据，为什么没有人用data_format2中的数据呢？
-timestamp中数据的单位是什么？没有看懂
 

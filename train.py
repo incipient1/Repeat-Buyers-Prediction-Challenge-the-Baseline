@@ -32,8 +32,7 @@ x = pd.read_csv("x.csv")
 
 # fmap
 print("create feature map... ")
-features = [f for f in x.columns if f not in [
-    "label", "user_id", "seller_id", "index"]]
+features = [f for f in x.columns if f not in ["label", "user_id", "seller_id", "index"]]
 create_feature_map(features)
 
 
@@ -42,7 +41,7 @@ print ("all samples: ", x.shape)
 
 x0 = x[x.label == 0]
 x1 = x[x.label == 1]
-x0 = x0.reindex(np.random.permutation(x0.index))
+x0 = x0.reindex(np.random.permutation(x0.index)) # 随机重排索引，真的是很好的一个方法
 x1 = x1.reindex(np.random.permutation(x1.index))
 
 # train model
@@ -50,19 +49,19 @@ x1 = x1.reindex(np.random.permutation(x1.index))
 x_posi = x1[x1.label == 1]  # [0:14952]
 x_nega = x0[x0.label == 0][0:int(1.5 * 30000)]
 x = pd.concat((x_posi, x_nega), axis=0)
-x = x.reindex(np.random.permutation(x.index))
+x = x.reindex(np.random.permutation(x.index)) # 我的错误想法是：reset_index
 print ("positive samples: ", x_posi.shape)
 print ("negative samples: ", x_nega.shape)
 
 
-id = x[["user_id", "seller_id"]]
+id = x[["user_id", "seller_id"]] # 这里把id这个方法重写了，最好换个变量：id_
 y = x["label"]
-x = x.drop(["label"], axis=1)
+x = x.drop(["label"], axis=1) # 这里为什么要写4行，而不一次性写在1行里呢？
 x = x.drop(["user_id"], axis=1)
 x = x.drop(["seller_id"], axis=1)
 x = x.drop(["index"], axis=1)
 X_train, X_test, y_train, y_test = train_test_split(
-    x.as_matrix(), y.as_matrix(), test_size=0.25)
+    x.as_matrix(), y.as_matrix(), test_size=0.25) # ax_matrix和.values差不多，只是前者能转换成object对象，如果值中有非数值的话
 
 # train sample
 dtrain = xgb.DMatrix(x.as_matrix(), y.as_matrix())
